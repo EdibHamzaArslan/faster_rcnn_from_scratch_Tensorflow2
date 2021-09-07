@@ -88,14 +88,14 @@ class AnchorGenerator:
         n_pos = C.anchor_pos_ratio * C.anchor_n_sample  # 128
         pos_index = np.where(anchor_labels == 1)[0]
         if len(pos_index) > n_pos:
-            disable_index = np.random.choice(pos_index, size=(len(pos_index) - n_pos), replace=False)
+            disable_index = np.random.choice(pos_index, size=int(len(pos_index) - n_pos), replace=False)
             anchor_labels[disable_index] = -1
 
         # Total negative samples
         n_neg = C.anchor_n_sample - np.sum(anchor_labels == 1)  # Note: you can remove np.sum with n_pos, try later!!
         neg_index = np.where(anchor_labels == 0)[0]
         if len(neg_index) > n_neg:
-            disable_index = np.random.choice(neg_index, size=(len(neg_index) - n_neg), replace=False)
+            disable_index = np.random.choice(neg_index, size=int(len(neg_index) - n_neg), replace=False)
             anchor_labels[disable_index] = -1
 
         final_anchor_labels = np.empty((len(all_anchors)), dtype=anchor_labels.dtype)
