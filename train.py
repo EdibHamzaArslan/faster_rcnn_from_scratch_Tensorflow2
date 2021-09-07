@@ -20,17 +20,17 @@ vgg16_model.trainable = False
 # vgg16_model.summary() # 14 14 512
 
 rpn_model = rpn(vgg16_model.outputs[0].shape[1:], 9)
-rpn_model.compile(optimizer='adam', loss={'mse', 'categorical_crossentropy'})
 # rpn_model.summary()
+
+batch_size = 2
+epochs = 2
 
 input_imgs_path = '../data/imgs' # sys.argv[1]
 annotations_path = '../data/annotations' # sys.argv[2]
 data_gen = VOC2012(input_data_path=input_imgs_path,
-                   annotations_data_path=annotations_path)
+                   annotations_data_path=annotations_path,
+                   batch_size=batch_size)
 
-
-batch_size = 2
-epochs = 2
 
 for epoch in range(epochs):
     for imgs, boxes, cls in data_gen:
@@ -63,6 +63,7 @@ for epoch in range(epochs):
         roi_list = proposal_gen.get_roi(all_anchors,
                                         pred_anchor_locs,
                                         pred_cls_scores)
+
         # colors = np.array([[0.0, 0.0, 1.0]])
         # te = imgs[0][tf.newaxis, ...]
         # roi_list[0] = roi_list[0][np.newaxis, ...]
@@ -71,8 +72,8 @@ for epoch in range(epochs):
         # te = tf.image.draw_bounding_boxes(te, roi_list[0] / 224, colors)
         # plt.imshow(te[0])
         # plt.show()
-        # sys.exit()
-        total_roi_loss = 0
+        # sys.exit(1)
+
         for batch_index in range(len(roi_list)):
             roi = roi_list[batch_index]
             total_gt_box_n = boxes[batch_index].shape[0]
@@ -80,25 +81,22 @@ for epoch in range(epochs):
                                                                                        boxes[batch_index],
                                                                                        cls[batch_index],
                                                                                        total_gt_box_n)
-            print(f"gt roi locs shape {gt_roi_locs.shape}")
-            print(f"rois shape {indices_and_rois.shape}")
+
+            # print(gt_roi_locs.shape, gt_roi_labels.shape, indices_and_rois.shape) # 128, 4 & 128, 21 & 128, 5
 
             roi_model, pool_output = head(indices_and_rois, feature_maps[batch_index], indices_and_rois.shape[0])
 
-            print(gt_roi_labels.shape)
             with tf.GradientTape() as roi_tape:
                 pred_roi_box, pred_roi_cls = roi_model(pool_output)
+                # print(f"pred roi box {pred_roi_box.shape}, pred_roi_cls {pred_roi_cls.shape}")  # 128 84 & 128 21
                 te_roi_loc = np.array(pred_roi_box)
                 n_sample = te_roi_loc.shape[0]
-                roi_loc = te_roi_loc.reshape((n_sample, -1, 4))
-                print(gt_roi_labels[0, :].shape)
-                roi_loc = roi_loc[np.arange(0, n_sample), gt_roi_labels[0, :]]  # TODO ?????
-                print(roi_loc.shape)
+                roi_loc = te_roi_loc.reshape((n_sample, -1, 4)) # 128, 21, 4
+                roi_loc = roi_loc[np.arange(0, n_sample), gt_roi_labels.argmax(axis=-1)]
                 pred_roi_box = tf.convert_to_tensor(roi_loc)
                 loss_roi_box = tf.keras.losses.mse(gt_roi_locs, pred_roi_box)
                 loss_roi_cls = tf.keras.losses.categorical_crossentropy(gt_roi_labels, pred_roi_cls)
                 roi_loss = tf.reduce_sum(loss_roi_box) + tf.reduce_sum(loss_roi_cls)
-            total_roi_loss += roi_loss
+            print(f"[*]roi loss ==> {roi_loss}")
             roi_grads = roi_tape.gradient(roi_loss, roi_model.trainable_weights)
             tf.keras.optimizers.Adam(learning_rate=0.01).apply_gradients(zip(roi_grads, roi_model.trainable_weights))
-        print(f"[*]roi loss ==> {total_roi_loss}")

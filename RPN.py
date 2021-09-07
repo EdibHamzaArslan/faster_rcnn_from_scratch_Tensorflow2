@@ -12,7 +12,7 @@ def rpn(rpn_inputs_shape, num_anchors=C.n_anchors):
     # 14 14 18
     pred_cls_scores = tf.keras.layers.Conv2D(num_anchors * 1, 1,
                                              padding='same',
-                                             activation='softmax',
+                                             activation='sigmoid',
                                              bias_initializer='zeros')(x)
     # 14 14 36
     pred_anchor_locs = tf.keras.layers.Conv2D(num_anchors * 4, 1,

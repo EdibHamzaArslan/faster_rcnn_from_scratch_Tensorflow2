@@ -62,6 +62,3 @@ class ROI_Pooling(tf.keras.layers.Layer):
             output[i] = pool
 
         return output
-
-if __name__ == '__main__':
-    inputs = tf.keras.Input(())
