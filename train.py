@@ -87,11 +87,12 @@ for epoch in range(epochs):
             roi_model, pool_output = head(indices_and_rois, feature_maps[batch_index], indices_and_rois.shape[0])
 
             with tf.GradientTape() as roi_tape:
-                pred_roi_box, pred_roi_cls = roi_model(pool_output)
+                pred_roi_box, pred_roi_cls = roi_model(pool_output[None, ...])
                 # print(f"pred roi box {pred_roi_box.shape}, pred_roi_cls {pred_roi_cls.shape}")  # 128 84 & 128 21
                 te_roi_loc = np.array(pred_roi_box)
-                n_sample = te_roi_loc.shape[0]
+                n_sample = te_roi_loc.shape[1]
                 roi_loc = te_roi_loc.reshape((n_sample, -1, 4)) # 128, 21, 4
+                print(roi_loc.shape)
                 roi_loc = roi_loc[np.arange(0, n_sample), gt_roi_labels.argmax(axis=-1)]
                 pred_roi_box = tf.convert_to_tensor(roi_loc)
                 loss_roi_box = tf.keras.losses.mse(gt_roi_locs, pred_roi_box)

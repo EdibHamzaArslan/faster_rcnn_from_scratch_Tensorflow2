@@ -27,7 +27,7 @@ def get_roi(all_anchors, pred_anchor_locs, pred_cls_scores):
 
         nms_keep = nms(kept_roi, score, C.nms_threshold)
         if len(nms_keep) < C.n_train_post_nms:
-            random_nms = np.random.choice(nms_keep, size=(C.n_train_post_nms - len(nms_keep)))
+            random_nms = np.random.choice(nms_keep, size=int(C.n_train_post_nms - len(nms_keep)))
             for item in random_nms:
                 nms_keep.append(item)
         nms_keep = nms_keep[:C.n_train_post_nms] # change the post nms value like 200
